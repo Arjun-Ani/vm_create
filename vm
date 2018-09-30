@@ -1,0 +1,93 @@
+#!/bin/bash
+echo "Application Manager"
+echo "1) VM Manager"
+echo "2) IP Manager"
+read selection
+case "$selection" in
+	1)
+		echo "Enter the Input(launch(vm)/delete(vm)/list(vm))"
+		read a
+		if [ $a == "list" ]
+		then
+			echo "=====RUNNING VM'S========="
+			VBoxManage list runningvms | awk -F"_" '{print $1}' | tr -d "\""
+		elif [ $a == "launch" ]
+		then
+			echo "Enter the name of the VM"
+			read vm_name
+			mkdir /vagrant/$vm_name
+			cp /vagrant/template/Vagrantfile /vagrant/$vm_name
+		        vm_ip=`curl http://127.0.0.1:5002/list 2> /dev/null | tr -d "\n[]\"\ " | awk -F"," '{print $1}'`
+			curl -s "http://127.0.0.1:5002/delete?ip=$vm_ip" >> /dev/null
+			sed -i s/"192.168.0.13"/"$vm_ip"/g /vagrant/$vm_name/Vagrantfile
+			cd /vagrant/$vm_name/
+			vagrant up >> /dev/null
+			check=`echo $?`
+			if [ $check -eq 0 ]
+			then
+				echo "VM created......"
+			else
+				echo "Error...."
+			fi
+			echo "Assigning IP $vm_ip"
+			vagrant reload >> /dev/null
+			check1=`echo $?`
+		        if [ $check1 -eq 0 ]
+		        then
+		                echo "VM Network Assigned......"
+		        else
+		                echo "Error...."
+		        fi
+			cd - >> /dev/null
+		elif [ $a == "delete" ]
+		then
+		        echo "Enter the name of the VM"
+		        read vm_name
+		        cd /vagrant/$vm_name >> /dev/null
+			vm_ip=`grep wlo1 Vagrantfile | awk -F "," '{print $3}' | awk -F":" '{print $2}' | tr -d "\"\ "`
+			curl -s "http://127.0.0.1:5002/add?ip=$vm_ip" >> /dev/null
+		        vagrant halt >> /dev/null
+			check2=`echo $?`
+		        if [ $check2 -eq 0 ]
+		        then
+		                echo "VM deleted ......"
+		        else
+		                echo "Error...."
+		        fi
+		        cd - >> /dev/null
+	        else
+			echo "Wrong Input"
+		fi
+		;;
+	
+	2)
+		echo "Enter the Input(add(ip)/delete(ip)/list(ip))"
+		read inp
+		if [ $inp == "add" ]
+		then
+			echo "Enter the IP to be entered along with the subnet"
+			read ip
+			for i in `prips $ip`
+			do
+				curl -s "http://127.0.0.1:5002/add?ip=$i" >> /dev/null
+		        done
+		elif [ $inp == "delete" ]
+		then
+			echo "Enter the IP to be deleted"
+			read ip
+			for i in `prips $ip`
+			do
+				curl -s "http://127.0.0.1:5002/delete?ip=$i" >> /dev/null
+			done
+		elif [ $inp == "list" ]
+		then
+			curl -s "http://127.0.0.1:5002/list"
+		else
+			echo "Wrong Input"
+		fi
+		;;
+	*)
+	       echo "Wrong Input"
+               ;;
+esac	       
+		
