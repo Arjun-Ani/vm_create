@@ -37,7 +37,6 @@ Required Packages :-
 
 
 Steps :-
-----
 
 1) Install vagrant and virtual box and do remember to enable virtualisation through BIOS.
 2) Copy bash script in /bin and give execute priviledge.
